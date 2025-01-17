@@ -4,16 +4,21 @@ from mpl_toolkits.mplot3d import Axes3D
 
 class Cone:
 
-    def __init__(self, height = 2, offsets = (0,0), rot = 0):
-        self.theta = np.linspace(0, 2 * np.pi, 1000)
-        self.z = np.linspace(0, height, 50)
+    NUM_OF_ANGLES = 1000
+    NUM_OF_Z = 50
+
+    def __init__(self, height = 2, angle = np.pi/4, offsets = (0,0), rot = 0):
+        self.theta = np.linspace(0, 2 * np.pi, self.NUM_OF_ANGLES)
+        self.z = np.linspace(0, height, self.NUM_OF_Z)
         self.offsets = offsets
+        self.height = height
 
         #Creates a matrix of the different z values and the angles at each z
         self.Z, self.T = np.meshgrid(self.z, self.theta)
 
         #TODO this line of code needs to be changed, atm this is assuming a 45 degree angle. I will make it so it is more generic
-        self.R = self.Z
+        #self.R = self.Z
+        self.R = self.Z*np.tan(angle)
 
         #Ok so roating first then offseting is better imo as it means the cone behaves as expected
         #self.X = self.R * np.cos(self.T) + self.offsets[0]
@@ -75,6 +80,31 @@ class Cone:
         displacements = (self.offsets[0]-self.X[0,0], self.offsets[1]-self.Y[0,0], 0-self.Z[0,0])
         self.offset(displacements)
 
+    def projectToZPlane(self, zPlane, maxSize = 100):
+        pass
+
+    def projectAsElipise(self, planeHeight, **kwargs):
+        '''
+        Returns an ellipse where the cone intersects the given plane
+        zErr is the z value allowed either side of the planeHeight
+        flattenZ sets all returned Z values to the planeheight
+        '''
+        zErr = kwargs.get('zErr')
+        flattenZ = kwargs.get('flattenZ')
+        if zErr is None:
+            zErr = (self.height/self.NUM_OF_Z)/2
+
+        indices = np.argwhere(np.isclose(self.Z, planeHeight, atol=zErr))
+
+        x = self.X[indices[:, 0], indices[:, 1]]
+        y = self.Y[indices[:, 0], indices[:, 1]]
+        if not flattenZ:
+            z = self.Z[indices[:, 0], indices[:, 1]]
+        else:
+            z = np.zeros(x.shape) + planeHeight
+
+        return np.column_stack((x, y, z))
+
 def findClose(circ1, circ2, threshold = 0.01):
     '''
     This code doesn't currently work, but was used to find were two circles meet
@@ -98,7 +128,7 @@ def findAverage(closeCoords):
     '''
 
     if not closeCoords:
-        raise Exception("No coordinates close", "Hello")
+        return 0, 0
     avX, avY = 0, 0
     for coords in closeCoords:
         avX += coords[0][0] + coords[1][0]
@@ -113,11 +143,15 @@ def main():
     
     height = 2
 
-    cone1 = Cone(height)
-    cone2 = Cone(height, (1,0), np.pi/4)
+    cone1 = Cone(height, np.pi/4)
+
+    cone1.projectAsElipise(2)
+
+    cone2 = Cone(3, np.pi/8, (1,0), np.pi/8)
+    cone2.projectAsElipise(1)
 
     #Testing to see if rotating the cone one way then back returns it to orginal position
-    cone3 = Cone(height, (1,1), -np.pi/4)
+    cone3 = Cone(height, np.pi/8, (1,1), -np.pi/4)
     cone3.roate(np.pi/4)
     cone3.recentreVertex()
 
@@ -131,19 +165,26 @@ def main():
     #closeCoords = findClose(circ1, circ2)
     #avX, avY = findAverage(closeCoords)
 
-    # x, y = [], []
-    # for coords in closeCoords:
-    #     i, j = coords
-    #     x.append(i[0])
-    #     x.append(j[0])
-    #     y.append(i[1])
-    #     y.append(j[1])
+    ellip1 = cone1.getCircle(-1)
+    ellip2 = cone2.projectAsElipise(2, flattenZ = True)
+
+    closeCoords = findClose(ellip1, ellip2)
+    avX, avY = findAverage(closeCoords)
+    x, y = [], []
+    for coords in closeCoords:
+        i, j = coords
+        x.append(i[0])
+        x.append(j[0])
+        y.append(i[1])
+        y.append(j[1])
     
-    #ax.scatter(x, y, height, label = 'Close Points')
-    # print(f"Average of close points: ({avX}, {avY})")
-    # ax.scatter(avX, avY, color = 'grey', label='Close Point Average')
-    
-    ax.scatter(circ1[:,0], circ1[:,1], circ1[:,2], color = 'blue')
+    ax.scatter(x, y, height, label = 'Close Points', color='green')
+    print(f"Average of close points: ({avX}, {avY})")
+    ax.scatter(avX, avY, color = 'grey', label='Close Point Average')
+
+    ax.scatter(ellip2[:,0], ellip2[:,1], ellip2[:,2], color = 'red') 
+   
+    #ax.scatter(circ1[:,0], circ1[:,1], circ1[:,2], color = 'blue')
     ax.scatter(circ2[:,0], circ2[:,1], circ2[:,2], color = 'orange')
 
 
