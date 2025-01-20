@@ -16,13 +16,8 @@ class Cone:
         #Creates a matrix of the different z values and the angles at each z
         self.Z, self.T = np.meshgrid(self.z, self.theta)
 
-        #TODO this line of code needs to be changed, atm this is assuming a 45 degree angle. I will make it so it is more generic
-        #self.R = self.Z
         self.R = self.Z*np.tan(angle)
 
-        #Ok so roating first then offseting is better imo as it means the cone behaves as expected
-        #self.X = self.R * np.cos(self.T) + self.offsets[0]
-        #self.Y = self.R * np.sin(self.T) + self.offsets[1]
         
         self.X = self.R * np.cos(self.T)
         self.Y = self.R * np.sin(self.T)
@@ -105,39 +100,59 @@ class Cone:
 
         return np.column_stack((x, y, z))
 
-def findClose(circ1, circ2, threshold = 0.01):
-    '''
-    This code doesn't currently work, but was used to find were two circles meet
-    '''
+    @staticmethod
+    def findClose(circ1, circ2, threshold = 0.01):
+        '''
+        This code doesn't currently work, but was used to find were two circles meet
+        '''
 
-    #Ngl this line is from chatGPT
-    distances = np.linalg.norm(circ1[:, None, :] - circ2[None, :, :], axis=2)
+        #Ngl this line is from chatGPT
+        distances = np.linalg.norm(circ1[:, None, :] - circ2[None, :, :], axis=2)
 
-    # Check if any distance is below the threshold
-    threshold = 0.01
-    close_pairs = np.argwhere(distances < threshold)
-    closeCoords = []
-    for idx1, idx2 in close_pairs:
-        closeCoords.append((circ1[idx1], circ2[idx2]))
+        # Check if any distance is below the threshold
+        threshold = 0.01
+        close_pairs = np.argwhere(distances < threshold)
+        closeCoords = []
+        for idx1, idx2 in close_pairs:
+            closeCoords.append((circ1[idx1], circ2[idx2]))
+        
+        return closeCoords
+
+    @staticmethod
+    def findAverage(closeCoords):
+        '''
+        Finds the average position of a set of input coordinates
+        '''
+
+        if not closeCoords:
+            return 0, 0
+        avX, avY = 0, 0
+        for coords in closeCoords:
+            avX += coords[0][0] + coords[1][0]
+            avY += coords[0][1] + coords[1][1]
+
+        avX /= len(closeCoords)*2
+        avY /= len(closeCoords)*2
+
+        return avX, avY
     
-    return closeCoords
+    @staticmethod
+    def findZplane(cone1, cone2, height = 2, returnAll = False):
 
-def findAverage(closeCoords):
-    '''
-    Finds the average position of a set of input coordinates
-    '''
+        zToSearch = np.linspace(0, height, Cone.NUM_OF_Z)
+        zOfInterest = {}
+        for z in zToSearch:
+            ellip1 = cone1.projectAsElipise(z, flattenZ = True)
+            ellip2 = cone2.projectAsElipise(z, flattenZ = True)
+            close = Cone.findClose(ellip1, ellip2)
+            if len(close) == 0:
+                continue
+            zOfInterest[z] = close
 
-    if not closeCoords:
-        return 0, 0
-    avX, avY = 0, 0
-    for coords in closeCoords:
-        avX += coords[0][0] + coords[1][0]
-        avY += coords[0][1] + coords[1][1]
-
-    avX /= len(closeCoords)*2
-    avY /= len(closeCoords)*2
-
-    return avX, avY
+        if returnAll:
+            return zOfInterest
+        most = max(zOfInterest, key=lambda k: len(zOfInterest[k]))
+        return (most, zOfInterest[most])
 
 def main():
     
@@ -166,10 +181,13 @@ def main():
     #avX, avY = findAverage(closeCoords)
 
     ellip1 = cone1.getCircle(-1)
+    ellip1 = cone1.projectAsElipise(2, flattenZ = True)
     ellip2 = cone2.projectAsElipise(2, flattenZ = True)
 
-    closeCoords = findClose(ellip1, ellip2)
-    avX, avY = findAverage(closeCoords)
+    print(Cone.findZplane(cone1, cone2))
+
+    closeCoords = Cone.findClose(ellip1, ellip2)
+    avX, avY = Cone.findAverage(closeCoords)
     x, y = [], []
     for coords in closeCoords:
         i, j = coords
