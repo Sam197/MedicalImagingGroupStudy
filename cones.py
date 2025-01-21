@@ -177,10 +177,10 @@ def main():
     height = 2
 
     cone1 = Cone(np.pi/4)
-    cone1.projectAsEllipse(2)
+    cone1.projectAsEllipse(Axes.z, 2)
 
     cone2 = Cone(np.pi/8, height=3, offsets = (1,0,0), rot = (Axes.y, np.pi/8))    
-    cone2.projectAsEllipse(1)
+    cone2.projectAsEllipse(Axes.z, 1)
 
     #Testing to see if rotating the cone one way then back returns it to orginal position
     cone3 = Cone(np.pi/8, height = height, offsets = (1,1,0), rot = (Axes.y, -np.pi/4))
@@ -190,8 +190,8 @@ def main():
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    ellip1 = cone1.projectAsEllipse(2, flattenZ = True)
-    ellip2 = cone2.projectAsEllipse(2, flattenZ = True)
+    ellip1 = cone1.projectAsEllipse(Axes.z, 2, flattenZ = True)
+    ellip2 = cone2.projectAsEllipse(Axes.z, 2, flattenZ = True)
 
     closeCoords = Cone.findClose(ellip1, ellip2)
     avX, avY = Cone.findAverage(closeCoords)
