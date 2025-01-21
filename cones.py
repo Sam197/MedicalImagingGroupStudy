@@ -18,7 +18,6 @@ class Cone:
 
         self.R = self.Z*np.tan(angle)
 
-        
         self.X = self.R * np.cos(self.T)
         self.Y = self.R * np.sin(self.T)
 
@@ -28,10 +27,20 @@ class Cone:
         self.offset((*self.offsets, 0))
 
     def makeRotMat(self, angle):
-        yRotMat = [[np.cos(angle), 0, np.sin(angle)],
-                   [0, 1, 0],
-                   [-np.sin(angle), 0, np.cos(angle)]]
-        return yRotMat
+        axis = 'y'
+        if axis == 'x':
+            rotMat = [[1, 0, 0],
+                      [0, np.cos(angle), -np.sin(angle)],
+                      [0, np.sin(angle), np.cos(angle)]]
+        elif axis == 'y':
+            rotMat = [[np.cos(angle), 0, np.sin(angle)],
+                    [0, 1, 0],
+                    [-np.sin(angle), 0, np.cos(angle)]]
+        elif axis == 'z':
+            rotMat = [[np.cos(angle), -np.sin(angle), 0],
+                      [np.sin(angle), np.cos(angle), 0],
+                      [0, 0, 1]]
+        return rotMat
 
     def roate(self, angle):
         '''
@@ -78,7 +87,7 @@ class Cone:
     def projectToZPlane(self, zPlane, maxSize = 100):
         pass
 
-    def projectAsElipise(self, planeHeight, **kwargs):
+    def projectAsElipise(self, planeHeight, **kwargs) -> np.ndarray:
         '''
         Returns an ellipse where the cone intersects the given plane
         zErr is the z value allowed either side of the planeHeight
@@ -170,21 +179,15 @@ def main():
     cone3.roate(np.pi/4)
     cone3.recentreVertex()
 
-    circ1 = cone1.getCircle(-1)
-    circ2 = cone2.getCircle(-1)
+    cone4 = Cone(height, np.pi/4)
+    cone4.roate(np.pi)
+    cone4.offset((0,0,4))
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    #Since I broke my intersection code, this will be commented out..... for now
-    #closeCoords = findClose(circ1, circ2)
-    #avX, avY = findAverage(closeCoords)
-
-    ellip1 = cone1.getCircle(-1)
     ellip1 = cone1.projectAsElipise(2, flattenZ = True)
     ellip2 = cone2.projectAsElipise(2, flattenZ = True)
-
-    print(Cone.findZplane(cone1, cone2))
 
     closeCoords = Cone.findClose(ellip1, ellip2)
     avX, avY = Cone.findAverage(closeCoords)
@@ -201,14 +204,12 @@ def main():
     ax.scatter(avX, avY, color = 'grey', label='Close Point Average')
 
     ax.scatter(ellip2[:,0], ellip2[:,1], ellip2[:,2], color = 'red') 
-   
-    #ax.scatter(circ1[:,0], circ1[:,1], circ1[:,2], color = 'blue')
-    ax.scatter(circ2[:,0], circ2[:,1], circ2[:,2], color = 'orange')
 
 
     ax.plot_surface(*cone1.xyz, color = 'blue', alpha=0.5)
     ax.plot_surface(*cone2.xyz, color = 'orange', alpha=0.5)
     ax.plot_surface(*cone3.xyz, color = 'pink', alpha = 0.5)
+    ax.plot_surface(*cone4.xyz, color = 'red', alpha = 0.5)
 
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
