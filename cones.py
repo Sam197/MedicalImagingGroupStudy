@@ -1,13 +1,29 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from enum import Enum
+
+class Axes(Enum):
+    x = 0
+    y = 1
+    z = 2
 
 class Cone:
 
     NUM_OF_ANGLES = 1000
     NUM_OF_Z = 50
 
-    def __init__(self, height = 2, angle = np.pi/4, offsets = (0,0), rot = 0):
+    def __init__(self, angle = np.pi/4, **kwargs):
+        '''
+        Creates a cone with a given angle. Key words: height - the height of the cone
+        offsets - where the vertex of the cone will be
+        rot - rotatation of the cone, given as a tuple (axis, angle (in RADIANS))
+        '''
+
+        height = kwargs.get('height', 2)
+        offsets = kwargs.get('offsets', (0,0,0))
+        rot = kwargs.get('rot', None)
+
         self.theta = np.linspace(0, 2 * np.pi, self.NUM_OF_ANGLES)
         self.z = np.linspace(0, height, self.NUM_OF_Z)
         self.offsets = offsets
@@ -22,37 +38,37 @@ class Cone:
         self.Y = self.R * np.sin(self.T)
 
         if rot:
-            self.roate(rot)
+            self.rotate(*rot)
         
         self.offset((*self.offsets, 0))
 
-    def makeRotMat(self, angle):
-        axis = 'y'
-        if axis == 'x':
+    def makeRotMat(self, axis, angle):
+        
+        if axis == Axes.x:
             rotMat = [[1, 0, 0],
                       [0, np.cos(angle), -np.sin(angle)],
                       [0, np.sin(angle), np.cos(angle)]]
-        elif axis == 'y':
+        elif axis == Axes.y:
             rotMat = [[np.cos(angle), 0, np.sin(angle)],
                     [0, 1, 0],
                     [-np.sin(angle), 0, np.cos(angle)]]
-        elif axis == 'z':
+        elif axis == Axes.z:
             rotMat = [[np.cos(angle), -np.sin(angle), 0],
                       [np.sin(angle), np.cos(angle), 0],
                       [0, 0, 1]]
         return rotMat
 
-    def roate(self, angle):
+    def rotate(self, axis, angle):
         '''
         Rotate the cone by angle in RADIANS
         '''
-        yRotMat = self.makeRotMat(angle)
+        rotMat = self.makeRotMat(axis, angle)
 
         #Turn the 3 2D arrays into 3XN matrix
         allPoints = np.vstack((self.X.ravel(), self.Y.ravel(), self.Z.ravel()))
 
         #Rotate the matrix
-        rotated_points = yRotMat @ allPoints
+        rotated_points = rotMat @ allPoints
 
         # Reshape the rotated array back into the original shapes for the cone
         self.X = rotated_points[0, :].reshape(self.X.shape)
@@ -71,7 +87,7 @@ class Cone:
     def xyz(self):
         return self.X, self.Y, self.Z
     
-    def getCircle(self, index):
+    def getCircle(self, index) -> np.ndarray:
         '''
         Returns the points on the circle of input index of the cone
         '''
@@ -87,16 +103,14 @@ class Cone:
     def projectToZPlane(self, zPlane, maxSize = 100):
         pass
 
-    def projectAsElipise(self, planeHeight, **kwargs) -> np.ndarray:
+    def projectAsEllipse(self, plane, planeHeight, **kwargs) -> np.ndarray:
         '''
         Returns an ellipse where the cone intersects the given plane
         zErr is the z value allowed either side of the planeHeight
         flattenZ sets all returned Z values to the planeheight
         '''
-        zErr = kwargs.get('zErr')
-        flattenZ = kwargs.get('flattenZ')
-        if zErr is None:
-            zErr = (self.height/self.NUM_OF_Z)/2
+        zErr = kwargs.get('zErr', (self.height/self.NUM_OF_Z)/2)
+        flattenZ = kwargs.get('flattenZ', False)
 
         indices = np.argwhere(np.isclose(self.Z, planeHeight, atol=zErr))
 
@@ -110,11 +124,7 @@ class Cone:
         return np.column_stack((x, y, z))
 
     @staticmethod
-    def findClose(circ1, circ2, threshold = 0.01):
-        '''
-        This code doesn't currently work, but was used to find were two circles meet
-        '''
-
+    def findClose(circ1, circ2, threshold = 0.01) -> list:
         #Ngl this line is from chatGPT
         distances = np.linalg.norm(circ1[:, None, :] - circ2[None, :, :], axis=2)
 
@@ -128,11 +138,10 @@ class Cone:
         return closeCoords
 
     @staticmethod
-    def findAverage(closeCoords):
+    def findAverage(closeCoords) -> float:
         '''
         Finds the average position of a set of input coordinates
         '''
-
         if not closeCoords:
             return 0, 0
         avX, avY = 0, 0
@@ -146,13 +155,13 @@ class Cone:
         return avX, avY
     
     @staticmethod
-    def findZplane(cone1, cone2, height = 2, returnAll = False):
+    def findZplane(cone1, cone2, height = 2, returnAll = False) -> tuple:
 
         zToSearch = np.linspace(0, height, Cone.NUM_OF_Z)
         zOfInterest = {}
         for z in zToSearch:
-            ellip1 = cone1.projectAsElipise(z, flattenZ = True)
-            ellip2 = cone2.projectAsElipise(z, flattenZ = True)
+            ellip1 = cone1.projectAsEllipse(z, flattenZ = True)
+            ellip2 = cone2.projectAsEllipse(z, flattenZ = True)
             close = Cone.findClose(ellip1, ellip2)
             if len(close) == 0:
                 continue
@@ -167,27 +176,22 @@ def main():
     
     height = 2
 
-    cone1 = Cone(height, np.pi/4)
+    cone1 = Cone(np.pi/4)
+    cone1.projectAsEllipse(2)
 
-    cone1.projectAsElipise(2)
-
-    cone2 = Cone(3, np.pi/8, (1,0), np.pi/8)
-    cone2.projectAsElipise(1)
+    cone2 = Cone(np.pi/8, height=3, offsets = (1,0,0), rot = (Axes.y, np.pi/8))    
+    cone2.projectAsEllipse(1)
 
     #Testing to see if rotating the cone one way then back returns it to orginal position
-    cone3 = Cone(height, np.pi/8, (1,1), -np.pi/4)
-    cone3.roate(np.pi/4)
+    cone3 = Cone(np.pi/8, height = height, offsets = (1,1,0), rot = (Axes.y, -np.pi/4))
+    cone3.rotate(Axes.y, np.pi/4)
     cone3.recentreVertex()
-
-    cone4 = Cone(height, np.pi/4)
-    cone4.roate(np.pi)
-    cone4.offset((0,0,4))
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    ellip1 = cone1.projectAsElipise(2, flattenZ = True)
-    ellip2 = cone2.projectAsElipise(2, flattenZ = True)
+    ellip1 = cone1.projectAsEllipse(2, flattenZ = True)
+    ellip2 = cone2.projectAsEllipse(2, flattenZ = True)
 
     closeCoords = Cone.findClose(ellip1, ellip2)
     avX, avY = Cone.findAverage(closeCoords)
@@ -201,15 +205,13 @@ def main():
     
     ax.scatter(x, y, height, label = 'Close Points', color='green')
     print(f"Average of close points: ({avX}, {avY})")
+
     ax.scatter(avX, avY, color = 'grey', label='Close Point Average')
-
     ax.scatter(ellip2[:,0], ellip2[:,1], ellip2[:,2], color = 'red') 
-
 
     ax.plot_surface(*cone1.xyz, color = 'blue', alpha=0.5)
     ax.plot_surface(*cone2.xyz, color = 'orange', alpha=0.5)
     ax.plot_surface(*cone3.xyz, color = 'pink', alpha = 0.5)
-    ax.plot_surface(*cone4.xyz, color = 'red', alpha = 0.5)
 
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
