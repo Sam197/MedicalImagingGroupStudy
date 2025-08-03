@@ -3,8 +3,10 @@ Final code made for the Vector Projection Method of image recon. This is not an 
 represents the final step of taken processed data, projecting the data as cones, and finding the intersection of them. This was also not
 the only method, with one of my lab partners creating the meshgrid method. This is also not the only method prototyped, developed and tested
 on expirmental and monte carlo data by me, but it is the most advanced and complete, and the only one of my methods expolored in the final
-report. Many thanks go the the image recontruction team, consisting of Heather and James who worked on energy calibration, conicidence finding and
-general data cleaning, and Sinéad for her work on the meshgrid method.
+report. I also aplogise for some code gore you may encounter when flicking through (Namely the many, many, commented out lines of code). While
+I have no amazing excuse for this, my excuse will be the time crunch we were under to get some code that worked and spent little time on any form
+of front end and keeping our code clean. With that aside,many thanks go the the image recontruction team, consisting of Heather and James who 
+worked on energy calibration, conicidence finding and general data cleaning, and Sinéad for her work on the meshgrid method.
 '''
 
 import numpy as np
@@ -446,8 +448,8 @@ def makeHeatMap(cones, axes):
     bins = 200
     rnge = ([-100,100],[-100,100])  #How big are the heatmaps
     histos = []
-    startPlane = -5
-    endPlane = -15
+    startPlane = -9
+    endPlane = -11
     step = -1
 
     s = time()
